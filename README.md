@@ -13,12 +13,12 @@ Clone this repository and build the binary:
 ```bash
 zig build
 ```
-The compiled binary will be placed at `zig-out/bin/roc_jupyter_kernel`.
+The compiled binary will be placed at `zig-out/bin/iroc`.
 
 ### Step 2: Register the kernel with Jupyter
 Run the binary with the `--install` flag:
 ```bash
-./zig-out/bin/roc_jupyter_kernel --install
+./zig-out/bin/iroc --install
 ```
 This automatically generates the required `kernel.json` config and registers the spec with Jupyter.
 

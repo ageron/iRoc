@@ -1,8 +1,8 @@
 const std = @import("std");
-const roc_jupyter_kernel = @import("roc_jupyter_kernel");
-const zmq = roc_jupyter_kernel.zmq;
-const protocol = roc_jupyter_kernel.protocol;
-const compiler_interface = roc_jupyter_kernel.compiler_interface;
+const iroc = @import("iroc");
+const zmq = iroc.zmq;
+const protocol = iroc.protocol;
+const compiler_interface = iroc.compiler_interface;
 
 const c = @cImport({
     @cInclude("unistd.h");

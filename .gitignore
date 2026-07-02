@@ -1,0 +1,10 @@
+# Zig cache and build output
+.zig-cache/
+zig-out/
+
+# Operating System specific files
+.DS_Store
+
+# Jupyter Notebook temporary files
+.ipynb_checkpoints/
+*.ipynb

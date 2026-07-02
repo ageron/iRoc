@@ -1,8 +1,4 @@
-# Roc Jupyter Kernel
-
-This project contains the Roc Jupyter Kernel.
-
----
+# iRoc - A Roc kernel for Jupyter project
 
 ## Installation
 

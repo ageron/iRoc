@@ -257,22 +257,28 @@ fn handleShellMessage(
             try protocol.sendMessage(iopub, loopAllocator, key, streamMsg, true);
         }
 
-        // 2. If .result or .diagnostics is not empty, publish it to iopub as execute_result
+        // Publish diagnostics as Jupyter errors and successful values as text results.
         if (runRes.result != null or runRes.diagnostics != null) {
-            const val_to_send = runRes.result orelse runRes.diagnostics.?;
+            const val_to_send = runRes.diagnostics orelse runRes.result.?;
             std.log.debug("Raw result/diagnostic string: {s}", .{val_to_send});
             const resultMsgId = try generateUuid(loopAllocator);
             const resultDate = try generateDate(loopAllocator);
 
             var resultJson = std.Io.Writer.Allocating.init(loopAllocator);
             defer resultJson.deinit();
-            try std.json.Stringify.value(.{
-                .execution_count = executionCount.*,
-                .data = .{
-                    .@"text/plain" = val_to_send,
-                },
-                .metadata = .{},
-            }, .{}, &resultJson.writer);
+            if (runRes.diagnostics != null) {
+                try std.json.Stringify.value(.{
+                    .ename = "RocError",
+                    .evalue = val_to_send,
+                    .traceback = &[_][]const u8{val_to_send},
+                }, .{}, &resultJson.writer);
+            } else {
+                try std.json.Stringify.value(.{
+                    .execution_count = executionCount.*,
+                    .data = .{ .@"text/plain" = val_to_send },
+                    .metadata = .{},
+                }, .{}, &resultJson.writer);
+            }
 
             const resultMsg = protocol.Message{
                 .identities = &.{},
@@ -280,7 +286,7 @@ fn handleShellMessage(
                     .msgId = resultMsgId,
                     .username = msg.header.username,
                     .session = msg.header.session,
-                    .msgType = "execute_result",
+                    .msgType = if (runRes.diagnostics != null) "error" else "execute_result",
                     .version = "5.3",
                     .date = resultDate,
                 },
@@ -294,7 +300,24 @@ fn handleShellMessage(
         // Send execute reply
         const replyMsgId = try generateUuid(loopAllocator);
         const replyDate = try generateDate(loopAllocator);
-        const replyContent = try std.fmt.allocPrint(loopAllocator, "{{\n  \"status\": \"ok\",\n  \"execution_count\": {d},\n  \"user_expressions\": {{}}\n}}", .{executionCount.*});
+        var replyJson = std.Io.Writer.Allocating.init(loopAllocator);
+        defer replyJson.deinit();
+        if (runRes.diagnostics) |diagnostic| {
+            try std.json.Stringify.value(.{
+                .status = "error",
+                .execution_count = executionCount.*,
+                .ename = "RocError",
+                .evalue = diagnostic,
+                .traceback = &[_][]const u8{diagnostic},
+            }, .{}, &replyJson.writer);
+        } else {
+            try std.json.Stringify.value(.{
+                .status = "ok",
+                .execution_count = executionCount.*,
+                .user_expressions = .{},
+            }, .{}, &replyJson.writer);
+        }
+        const replyContent = replyJson.writer.buffered();
 
         const replyMsg = protocol.Message{
             .identities = msg.identities,

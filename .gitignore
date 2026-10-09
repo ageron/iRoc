@@ -8,3 +8,4 @@ zig-out/
 # Jupyter Notebook temporary files
 .ipynb_checkpoints/
 *.ipynb
+__pycache__/

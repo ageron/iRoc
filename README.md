@@ -5,7 +5,9 @@
 To install the Roc Jupyter Kernel on your system:
 
 ### Prerequisites
-- The **Roc compiler** must be installed and available in your system `$PATH` (ensure `roc` is runnable).
+- The **Roc compiler** must be installed and available in your system `$PATH` with support for `roc repl --formatter` (ensure `roc` is runnable).
+- **ZeroMQ** development libraries (`brew install zeromq` on macOS).
+- **Zig 0.16.0** for the kernel (the Roc compiler has its own toolchain requirements).
 - **Python** and **Jupyter** (Jupyter Notebook or JupyterLab) must be installed.
 
 ### Step 1: Download or build the binary
@@ -13,7 +15,7 @@ Clone this repository and build the binary:
 ```bash
 zig build
 ```
-The compiled binary will be placed at `zig-out/bin/iroc`.
+The compiled binary and `json-repl-formatter.roc` are installed together in `zig-out/bin/`. Keep both files together when moving the kernel.
 
 ### Step 2: Register the kernel with Jupyter
 Run the binary with the `--install` flag:
@@ -48,15 +50,9 @@ To execute all unit and integration tests (including the ROUTER <-> DEALER messa
 ```bash
 zig build test --summary all
 ```
-Expected output:
-```text
-Build Summary: 5/5 steps succeeded; 7/7 tests passed
-test success
-+- run test 6 pass (6 total) 69ms MaxRSS:5M
-|  +- compile test Debug native cached 42ms MaxRSS:34M
-+- run test 1 pass (1 total) 1s MaxRSS:2M
-   +- compile test Debug native success 992ms MaxRSS:299M
-```
+The suite includes the compiler integration test, which checks persistent
+bindings, multiline cells, diagnostics, recovery, and reset against the selected
+Roc executable.
 
 ---
 
@@ -87,8 +83,33 @@ The ZeroMQ wrapper exposes:
 
 ### 3. Roc REPL Integration (`src/main.zig` & `src/compiler_interface.zig`)
 * **Connection File Parsing**: Parses the Jupyter JSON connection file path passed via command line, extracting `shell_port`, `iopub_port`, `transport`, `ip`, and the HMAC `key`.
-* **REPL Child Process**: Spawns a persistent `roc repl --rpc` subprocess, managing the session with the `repl.start`, `repl.evaluate`, and `repl.stop` JSON-RPC methods.
-* **Request Evaluation**: Intercepts cell execution requests and evaluates them within the running REPL session. Output and diagnostics (errors or compiler warnings) are collected from the RPC JSON responses.
+* **REPL Child Process**: Spawns a persistent `roc repl --formatter <path>/json-repl-formatter.roc` subprocess using `roc` from `$PATH`. Each kernel owns one REPL scope; EOF closes it and restarting clears it.
+* **Request Evaluation**: Intercepts cell execution requests and evaluates them within the running REPL session. Output and diagnostics (errors or compiler warnings) are collected from the formatter JSON responses.
 * **Jupyter Streams & Outputs**: 
   - Standard output (`stdout`) from the evaluated code is routed to the `iopub` socket as a `stream` message.
-  - Evaluation results and compiler diagnostics are serialized using strict JSON stringification and published to the `iopub` socket as `execute_result` messages.
+  - Evaluation results are published as `execute_result` messages. Diagnostics are published as Jupyter `error` messages and an `execute_reply` with error status.
+
+### Formatter protocol
+
+The kernel sends one JSON line per cell: `{"code":"x = 40\nx + 2"}`.
+The Roc formatter uses built-in `Json.parse` and `Json.to_str` to produce replies
+with string fields `result`, `stdout`, and `diagnostics`. Empty strings mean no
+value or diagnostic. Malformed requests receive a diagnostic reply without
+changing the REPL state. Multiline source and strings are escaped by the JSON
+codec. Neither the compiler nor its CLI contains this JSON protocol.
+
+Run the integration tests against a specific compiler with:
+
+```sh
+zig build test -Droc=/absolute/path/to/roc
+```
+
+This first version returns inspected text. HTML and image values need a future
+typed result contract; the kernel does not guess rich formats from text.
+
+Additional end-to-end checks:
+
+```sh
+python3 tests/test_formatter.py --roc /absolute/path/to/roc
+uv run --with jupyter-client --with pyzmq python tests/test_jupyter.py --roc /absolute/path/to/roc
+```

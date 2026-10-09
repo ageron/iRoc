@@ -31,6 +31,11 @@ pub fn build(b: *std.Build) void {
     linkZmq(exe.root_module);
 
     b.installArtifact(exe);
+    b.installFile("json-repl-formatter.roc", "bin/json-repl-formatter.roc");
+    const compiler_options = b.addOptions();
+    compiler_options.addOption([]const u8, "roc_path", b.option([]const u8, "roc", "Roc executable for integration tests") orelse "roc");
+    compiler_options.addOption([]const u8, "formatter_path", b.pathFromRoot("json-repl-formatter.roc"));
+    mod.addOptions("compiler_test_options", compiler_options);
 
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);

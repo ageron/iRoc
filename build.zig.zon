@@ -74,6 +74,9 @@
         "build.zig",
         "build.zig.zon",
         "src",
+        "json-repl-formatter.roc",
+        "tests",
+        "README.md",
         // For example...
         //"LICENSE",
         //"README.md",

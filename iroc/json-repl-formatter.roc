@@ -27,7 +27,6 @@ encode = |response| {
 				"Html" => Ok(("text/html", "text"))
 				"Markdown" => Ok(("text/markdown", "text"))
 				"Svg" => Ok(("image/svg+xml", "text"))
-				"Latex" => Ok(("text/latex", "text"))
 				"StructuredJson" => Ok(("application/json", "json"))
 				_ => Err({})
 			}

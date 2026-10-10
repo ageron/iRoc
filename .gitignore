@@ -9,3 +9,9 @@ zig-out/
 .ipynb_checkpoints/
 *.ipynb
 __pycache__/
+
+# Python environments, packaging, and tests
+.venv/
+dist/
+*.egg-info/
+.pytest_cache/

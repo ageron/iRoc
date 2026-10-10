@@ -221,11 +221,7 @@ fn handleShellMessage(
         const runRes = try compiler_interface.compileAndRun(state, code);
         const res_len = if (runRes.result) |r| r.len else if (runRes.diagnostics) |d| d.len else 0;
         std.log.debug("compileAndRun returned result length: {}, stdout length: {}", .{ res_len, runRes.stdout.len });
-        defer {
-            if (runRes.result) |res| state.allocator.free(res);
-            state.allocator.free(runRes.stdout);
-            if (runRes.diagnostics) |diag| state.allocator.free(diag);
-        }
+        defer runRes.deinit(state.allocator);
 
         // 1. If .stdout is not empty, publish it to iopub as stream
         if (runRes.stdout.len > 0) {
@@ -257,7 +253,7 @@ fn handleShellMessage(
             try protocol.sendMessage(iopub, loopAllocator, key, streamMsg, true);
         }
 
-        // Publish diagnostics as Jupyter errors and successful values as text results.
+        // Publish diagnostics as Jupyter errors and successful values as MIME bundles.
         if (runRes.result != null or runRes.diagnostics != null) {
             const val_to_send = runRes.diagnostics orelse runRes.result.?;
             std.log.debug("Raw result/diagnostic string: {s}", .{val_to_send});
@@ -275,7 +271,7 @@ fn handleShellMessage(
             } else {
                 try std.json.Stringify.value(.{
                     .execution_count = executionCount.*,
-                    .data = .{ .@"text/plain" = val_to_send },
+                    .data = runRes.data.value,
                     .metadata = .{},
                 }, .{}, &resultJson.writer);
             }

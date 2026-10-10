@@ -93,7 +93,9 @@ The ZeroMQ wrapper exposes:
 
 The kernel sends one JSON line per cell: `{"code":"x = 40\nx + 2"}`.
 The Roc formatter uses built-in `Json.parse` and `Json.to_str` to produce replies
-with string fields `result`, `stdout`, and `diagnostics`. Empty strings mean no
+with string fields `result`, `stdout`, and `diagnostics`, plus a `data` list of
+`{mime, encoding, value}` entries. `encoding` is `text` or `json`; `value` is a
+string, decoded by the kernel for JSON entries. Empty result/diagnostic strings mean no
 value or diagnostic. Malformed requests receive a diagnostic reply without
 changing the REPL state. Multiline source and strings are escaped by the JSON
 codec. Neither the compiler nor its CLI contains this JSON protocol.
@@ -104,8 +106,30 @@ Run the integration tests against a specific compiler with:
 zig build test -Droc=/absolute/path/to/roc
 ```
 
-This first version returns inspected text. HTML and image values need a future
-typed result contract; the kernel does not guess rich formats from text.
+### Rich output
+
+Return one of these tags as the cell's last expression:
+
+| Roc expression | Jupyter MIME type |
+| --- | --- |
+| `Html("<b>Hello</b>")` | `text/html` |
+| `Markdown("# Title\n**Hello**")` | `text/markdown` |
+| `Svg("<svg xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"25\" cy=\"25\" r=\"20\"/></svg>")` | `image/svg+xml` |
+| `Latex("$$x^2 + y^2 = z^2$$")` | `text/latex` |
+| `StructuredJson(Json.to_str({name: "Roc", scores: [1.I64, 2.I64]}))` | `application/json` |
+
+All five tags take exactly one `Str`. For LaTeX, include math delimiters and
+escape backslashes in Roc strings, e.g. `Latex("$$\\frac{1}{2}$$")`.
+Structured JSON is published as an actual JSON value, including nested objects,
+arrays, booleans and null, with numeric text preserved. Invalid JSON or an invalid
+display payload produces a Jupyter error; subsequent cells remain usable.
+
+Every displayed result also includes its inspected `text/plain` representation.
+Only actual top-level structural tags activate rich output. Strings that look
+like tags, nested tags, nominal wrappers, and unrelated tags stay plain text.
+The compiler exposes tag information independently of the wire protocol; the Roc
+formatter owns these five display conventions. Rendering depends on the notebook
+frontend's MIME support and notebook trust settings.
 
 Additional end-to-end checks:
 

@@ -32,7 +32,7 @@ rich_cases = [
     ('Html("<b>café 🌍</b>")', 'text/html', '<b>café 🌍</b>', 'text'),
     ('Markdown("**bold**")', 'text/markdown', '**bold**', 'text'),
     ('Svg("<svg></svg>")', 'image/svg+xml', '<svg></svg>', 'text'),
-    ('StructuredJson(Json.to_str({name: "Roc", count: 42.I64, items: [1.I64, 2.I64]}))',
+    ('Json(Json.to_str({name: "Roc", count: 42.I64, items: [1.I64, 2.I64]}))',
      'application/json', {"name": "Roc", "count": 42, "items": [1, 2]}, 'json'),
     ('Html("")', 'text/html', '', 'text'),
     ('if True Html("chosen") else Other("skipped")', 'text/html', 'chosen', 'text'),

@@ -8,6 +8,7 @@ zig-out/
 # Jupyter Notebook temporary files
 .ipynb_checkpoints/
 *.ipynb
+!roc-colab.ipynb
 __pycache__/
 
 # Python environments, packaging, and tests

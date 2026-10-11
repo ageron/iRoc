@@ -48,7 +48,7 @@ def decode_response(line):
                     )
                 except ValueError:
                     response["diagnostics"] = (
-                        "StructuredJson expects a valid JSON string (use Json.to_str(value))"
+                        "Json expects a valid JSON string (use Json.to_str(value))"
                     )
                     break
             else:

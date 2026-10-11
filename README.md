@@ -87,7 +87,7 @@ Return one of these tags as the cell's last expression:
 | `Html("<b>Hello</b>")` | `text/html` |
 | `Markdown("# Title\n**Hello**")` | `text/markdown` |
 | `Svg("<svg xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"25\" cy=\"25\" r=\"20\"/></svg>")` | `image/svg+xml` |
-| `StructuredJson(Json.to_str({name: "Roc", scores: [1.I64, 2.I64]}))` | `application/json` |
+| `Json(Json.to_str({name: "Roc", scores: [1.I64, 2.I64]}))` | `application/json` |
 
 All four tags take exactly one `Str`. Use Markdown for math: `$...$` for inline
 math and `$$...$$` for display math in Jupyter. For example:

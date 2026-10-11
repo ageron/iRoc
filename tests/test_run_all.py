@@ -50,7 +50,7 @@ with tempfile.TemporaryDirectory(prefix="iroc-run-all-") as directory:
             "missing_name",
             "1 + True",
             "Html(42.I64)",
-            'StructuredJson("invalid json")',
+            'Json("invalid json")',
         ]:
             replies = batch(["before = 40.I64", error, "after = 99.I64", "before + 2"])
             statuses = [reply["status"] for reply in replies]

@@ -53,7 +53,9 @@ def main():
         from .kernel import RocKernel
 
         app = IPKernelApp.instance(kernel_class=RocKernel)
-        app.initialize()
+        # CLI configuration takes precedence over IPython profile files, which
+        # may select the host's Python kernel (for example google.colab).
+        app.initialize([*sys.argv[1:], "--IPKernelApp.kernel_class=iroc.kernel.RocKernel"])
         try:
             app.start()
         finally:

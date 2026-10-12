@@ -69,8 +69,15 @@ class RocKernel(Kernel):
                 "stream",
                 {"name": "stdout", "text": response["stdout"]},
             )
-        if response["diagnostics"]:
-            return self.error_reply("RocError", response["diagnostics"], silent)
+        if response["status"] != "success":
+            name = "RocIncompleteInput" if response["status"] == "incomplete" else "RocError"
+            return self.error_reply(name, response["diagnostics"], silent)
+        if response["diagnostics"] and not silent:
+            self.send_response(
+                self.iopub_socket,
+                "stream",
+                {"name": "stderr", "text": response["diagnostics"]},
+            )
         if response["bundle"] and not silent:
             self.send_response(
                 self.iopub_socket,

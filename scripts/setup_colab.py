@@ -12,9 +12,11 @@ from textwrap import dedent
 from urllib.request import urlretrieve
 from zipfile import ZipFile
 
-COMPILER_URL = (
-    "https://github.com/ageron/roc/releases/download/roc-iroc-2026-10-11/"
-    "roc-iroc-linux-x86_64.zip"
+# Override the pinned release to try another compatible compiler build.
+COMPILER_URL = os.environ.get(
+    "IROC_COMPILER_URL",
+    "https://github.com/ageron/roc/releases/download/roc-iroc-2026-10-12/"
+    "roc-iroc-linux-x86_64.zip",
 )
 
 ARCHIVE = "/content/roc-iroc-linux-x86_64.zip"
@@ -43,6 +45,12 @@ def run(*args):
 
 
 def main():
+    if not COMPILER_URL:
+        raise RuntimeError(
+            "Set IROC_COMPILER_URL to a compatible Roc Linux x86_64 ZIP "
+            "using the Evaluate/Reply formatter API, or unset it to use "
+            "the default release."
+        )
     print("Downloading Roc…", flush=True)
     urlretrieve(COMPILER_URL, ARCHIVE)
     with ZipFile(ARCHIVE) as archive:
@@ -76,7 +84,7 @@ def main():
     repl = RocRepl(roc=sys.argv[1])
     try:
         reply = repl.execute("1 + 2 + 3")
-        if reply["diagnostics"]:
+        if reply["status"] != "success":
             raise RuntimeError(reply["diagnostics"])
         print("Roc test result:", reply["result"])
     finally:

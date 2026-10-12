@@ -8,7 +8,7 @@ from iroc.repl import ReplError, RocRepl, decode_response
 
 def reply(**fields):
     return json.dumps(
-        {"result": "", "stdout": "", "diagnostics": "", "data": [], **fields}
+        {"status": "success", "result": "", "stdout": "", "diagnostics": "", "data": [], **fields}
     )
 
 
@@ -29,11 +29,14 @@ def test_structured_json_and_invalid_json():
     for invalid in ["bad json", "NaN", "Infinity", "-Infinity"]:
         response = decode_response(
             reply(
+                diagnostics="existing warning",
                 data=[
                     {"mime": "application/json", "encoding": "json", "value": invalid}
                 ]
             )
         )
+        assert response["status"] == "failure"
+        assert "existing warning" in response["diagnostics"]
         assert "valid JSON" in response["diagnostics"]
 
 
@@ -44,6 +47,9 @@ def test_structured_json_and_invalid_json():
         "[]",
         "not json",
         '{"result": 42}',
+        reply(status="unknown"),
+        reply(status=None),
+        reply(status=[]),
         reply(data=[{}]),
         reply(data=[{"mime": "text/html", "encoding": "bad", "value": ""}]),
     ],
@@ -93,3 +99,15 @@ def test_json_decimal_wire_precision():
         reply(data=[{"mime": "application/json", "encoding": "json", "value": number}])
     )
     assert number.encode() in pack_message(response["bundle"])
+
+
+def test_status_is_independent_of_diagnostic_text():
+    success = decode_response(reply(
+        diagnostics="a warning", result="display",
+        data=[{"mime": "text/html", "encoding": "text", "value": "<b>ok</b>"}],
+    ))
+    assert success["status"] == "success"
+    assert success["bundle"]["text/html"] == "<b>ok</b>"
+    for status in ("failure", "incomplete"):
+        response = decode_response(reply(status=status, diagnostics=""))
+        assert response["status"] == status

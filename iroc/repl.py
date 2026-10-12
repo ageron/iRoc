@@ -26,11 +26,12 @@ def decode_response(line):
             not isinstance(response.get(key), str)
             for key in ("result", "stdout", "diagnostics")
         )
+        or response.get("status") not in ("success", "incomplete", "failure")
         or not isinstance(response.get("data"), list)
     ):
         raise ValueError("Invalid formatter response")
     bundle = {"text/plain": response["result"]} if response["result"] else {}
-    if not response["diagnostics"]:
+    if response["status"] == "success":
         for entry in response["data"]:
             if not isinstance(entry, dict) or any(
                 not isinstance(entry.get(key), str)
@@ -47,8 +48,10 @@ def decode_response(line):
                         parse_constant=reject_constant,
                     )
                 except ValueError:
-                    response["diagnostics"] = (
-                        "Json expects a valid JSON string (use Json.to_str(value))"
+                    response["status"] = "failure"
+                    problem = "Json expects a valid JSON string (use Json.to_str(value))"
+                    response["diagnostics"] = "\n".join(
+                        text for text in (response["diagnostics"], problem) if text
                     )
                     break
             else:

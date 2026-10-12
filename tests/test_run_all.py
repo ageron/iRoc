@@ -48,6 +48,9 @@ with tempfile.TemporaryDirectory(prefix="iroc-run-all-") as directory:
 
         for error in [
             "missing_name",
+            "[1,",
+            "expect 1 == 2",
+            'crash "run all failure"',
             "1 + True",
             "Html(42.I64)",
             'Json("invalid json")',

@@ -1,26 +1,34 @@
 module [decode, encode]
 
+Request : [Evaluate(Str), Reply(Str)]
+
 # The compiler supplies semantic tag information, independent of this protocol.
 Response : {
+	status : [Success, Incomplete, Failure],
 	result : Str,
 	stdout : Str,
 	diagnostics : Str,
 	value : [Other, Tag({ name : Str, payload : Try(Str, {}) })],
 }
 
-decode : Str -> Try(Str, Str)
+decode : Str -> Request
 decode = |line| {
 	request : Try({ code : Str }, [InvalidJson(Str), MissingRequiredField(Str)])
 	request = Json.parse(line)
 	match request {
-		Ok({ code }) => Ok(code)
-		Err(problem) => Err(encode({ result: "", stdout: "", diagnostics: Str.inspect(problem), value: Other }))
+		Ok({ code }) => Evaluate(code)
+		Err(problem) => Reply(encode(line, { status: Failure, result: "", stdout: "", diagnostics: Str.inspect(problem), value: Other }))
 	}
 }
 
-encode : Response -> Str
-encode = |response| {
-	rich = match response.value {
+encode : Str, Response -> Str
+encode = |_input, response| {
+	status = match response.status {
+		Success => "success"
+		Incomplete => "incomplete"
+		Failure => "failure"
+	}
+	rich = if response.status != Success Ok([]) else match response.value {
 		Other => Ok([])
 		Tag({ name, payload }) => {
 			format = match name {
@@ -40,8 +48,8 @@ encode = |response| {
 		}
 	}
 	reply = match rich {
-		Ok(data) => { result: response.result, stdout: response.stdout, diagnostics: response.diagnostics, data }
-		Err(problem) => { result: response.result, stdout: response.stdout, diagnostics: if response.diagnostics.is_empty() problem else response.diagnostics, data: [] }
+		Ok(data) => { status, result: response.result, stdout: response.stdout, diagnostics: response.diagnostics, data }
+		Err(problem) => { status: "failure", result: response.result, stdout: response.stdout, diagnostics: if response.diagnostics.is_empty() problem else "${response.diagnostics}\n${problem}", data: [] }
 	}
 	Json.to_str(reply)
 }

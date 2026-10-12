@@ -7,8 +7,14 @@ notebook integration and forwards the formatter's outputs.
 ## Installation
 
 Requirements: Python 3.10 or newer, Jupyter Notebook or JupyterLab, and a Roc
-compiler supporting `roc repl --formatter`. Zig and system ZeroMQ development
-libraries are no longer required to install iRoc.
+compiler supporting the `Evaluate`/`Reply` formatter API with
+`encode(input, response)` and explicit execution status. Earlier formatter
+compiler builds are incompatible with this version of iRoc. Zig and system
+ZeroMQ development libraries are no longer required to install iRoc.
+
+The Colab setup downloads the [October 12 compiler release](https://github.com/ageron/roc/releases/download/roc-iroc-2026-10-12/roc-iroc-linux-x86_64.zip)
+by default. To use another compatible Linux x86_64 ZIP containing
+`roc-iroc-linux-x86_64`, set `IROC_COMPILER_URL` before running setup.
 
 Install from this checkout in your chosen Python environment:
 
@@ -67,9 +73,21 @@ s = "Hello"
 This displays `s : Str`. A type query can share a cell with definitions or be
 run in a later cell; it does not evaluate the binding.
 
-Bindings persist between cells. Diagnostics become Jupyter errors; subsequent
-cells can still use definitions accepted before an error. `dbg` output is sent
-as stdout after the formatter finishes evaluating the cell.
+Bindings persist between cells. Top-level statements run in order and stop at the first
+failure or incomplete statement. Earlier accepted definitions remain available;
+a rejected definition is rolled back and subsequent statements are skipped.
+Incomplete source is not buffered: submit a new complete cell to finish it.
+
+The last successful expression supplies the result, even if followed by a
+definition, `expect`, `for`, or `while` statement. A standalone `dbg` produces
+`{}` as its result as well as debug output. A successful `:t` query replaces the
+result with type text. Cells containing
+only definitions have no displayed result. After a failed or incomplete cell,
+iRoc reports a Jupyter error and suppresses its result display; earlier accepted
+definitions remain usable. "Run All" stops on either status. Successful
+responses may contain diagnostic text, which is displayed on stderr without
+turning the execution into an error. `dbg` output is sent as stdout after the
+formatter finishes evaluating the cell.
 
 Interrupting execution stops the Roc process and clears its definitions. The
 error explicitly reports this; rerun defining cells afterward. The next cell
@@ -119,9 +137,28 @@ frontend's MIME support and notebook trust settings.
 - `iroc/__main__.py`: kernel launcher and kernelspec installer.
 
 The kernel sends one JSON line per cell: `{"code":"x = 40\nx + 2"}`.
-The formatter replies with `result`, `stdout`, and `diagnostics` strings plus a
-`data` list of `{mime, encoding, value}` entries. The kernel converts entries
-with `encoding: "json"` into JSON values; integers and decimals retain their
+The formatter replies with a `status` string (`"success"`, `"incomplete"`, or
+`"failure"`), `result`, `stdout`, and `diagnostics` strings, and a `data` list of
+`{mime, encoding, value}` entries. Status, not the presence of diagnostics,
+determines execution success. Malformed protocol requests and invalid rich
+payloads produce `"failure"`. Missing or unknown status is a protocol error.
+
+The Roc formatter implements `decode : Str -> [Evaluate(Str), Reply(Str)]` and
+`encode : Str, Response -> Str`. `Reply` returns a protocol response without
+execution; `encode` gets the original input line (excluding LF), so a custom
+formatter can recover IDs or display preferences without mutable formatter
+state. Its `Response` contains a structural `Success`, `Incomplete`, or `Failure`
+status plus `result`, `stdout`, `diagnostics`, and semantic `value` fields.
+The compiler extracts actual top-level tags; it never parses inspection text.
+A formatter-defined tag carrying one serialized string can describe a display
+bundle without adding recursive reflection to the compiler.
+
+User-code failures keep the Roc process usable. Invalid formatter modules,
+formatter crashes, replies containing literal LF, unsupported host effects,
+and operational failures terminate it. EOF normally closes it successfully;
+iRoc expects one complete reply for each submitted request.
+
+The kernel converts entries with `encoding: "json"` into JSON values; integers and decimals retain their
 precision on the Jupyter wire. Neither the Roc compiler nor its CLI contains
 this JSON-specific protocol.
 

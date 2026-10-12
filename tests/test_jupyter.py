@@ -29,6 +29,7 @@ with tempfile.TemporaryDirectory(prefix='iroc-jupyter-') as directory:
                 ('x = 40.I64', None, None),
                 ('x + 2', {'text/plain': '42'}, None),
                 ('missing_name', None, 'missing_name'),
+                ('[1,', None, 'list'),
                 ('x + 3', {'text/plain': '43'}, None),
                 ('s = "Hello"\n:t s', {'text/plain': 's : Str'}, None),
                 (':t s', {'text/plain': 's : Str'}, None),

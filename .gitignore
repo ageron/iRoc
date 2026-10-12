@@ -9,6 +9,7 @@ zig-out/
 .ipynb_checkpoints/
 *.ipynb
 !roc-colab.ipynb
+!roc-tutorial.ipynb
 __pycache__/
 
 # Python environments, packaging, and tests
